@@ -1,9 +1,9 @@
-# 2 - build Unbound
-name: CD 21 Build and Push
+# 2 - Build upon new release, then push
+name: CD 20 Build and Push
    
 on:
  workflow_run:
-   workflows: [CD 10 Unbound and OpenSSL Build Environement Release]
+   workflows: [CD 10 Check Upstream Release]
    types:
      - completed
 
@@ -47,7 +47,7 @@ jobs:
             fi
         fi
 
-  unbound-build: 
+  lego_cli-build: 
     runs-on: ubuntu-latest
     needs: buildvars
     steps:
@@ -81,7 +81,7 @@ jobs:
             BUILD_DATE=${{ needs.buildvars.outputs.BUILD_DATE }}  
             LEGO_VERSION=${{ needs.buildvars.outputs.LEGO_VERSION }}  
             DOCKER_IMAGE_VERSION=${{ needs.buildvars.outputs.DOCKER_IMAGE_VERSION }}
-          file: ./lego/Dockerfile   
+          file: ./lego_cli/Dockerfile   
           push: ${{ github.event_name != 'pull_request' }}
           sbom: ${{ github.event_name != 'pull_request' }}
           provenance: ${{ github.event_name != 'pull_request' }}

@@ -1,4 +1,4 @@
-# 1 - Daily check of upstream release for Unbound and OpenSSL
+# 1 - Daily check of upstream release
 name: CD 10 Check Upstream Release
 
 on:
