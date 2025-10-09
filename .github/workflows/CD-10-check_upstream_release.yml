@@ -24,8 +24,8 @@ jobs:
             fi
 
             # Get current version in lego_cli docker
-            echo DOCKER_LEGO_VERSION="$(curl -s https://raw.githubusercontent.com/megavolts/lego_cli/refs/heads/main/buildvars | awk '/^DOCKER_IMAGE_VERSION=/' | cut -d= -f2 | cut -d- -f1)" >> $GITHUB_OUTPUT  
-            echo DOCKER_REVISION="$(curl -s https://raw.githubusercontent.com/megavolts/lego_cli/refs/heads/main/buildvars | awk '/^DOCKER_IMAGE_VERSION=/' | cut -d= -f2 | cut -d- -f2))" >> $GITHUB_OUTPUT
+            echo DOCKER_LEGO_VERSION="$(curl -s https://raw.githubusercontent.com/megavolts/lego_cli/refs/heads/main/buildvars | awk '/^BUILD_IMAGE_VERSION=/' | cut -d= -f2 | cut -d- -f1)" >> $GITHUB_OUTPUT  
+            echo DOCKER_REVISION="$(curl -s https://raw.githubusercontent.com/megavolts/lego_cli/refs/heads/main/buildvars | awk '/^BUILD_IMAGE_VERSION=/' | cut -d= -f2 | cut -d- -f2))" >> $GITHUB_OUTPUT
 
       - name: Is update available
         id: IS_UPDATE_AVAILABLE
@@ -67,12 +67,12 @@ jobs:
           BUILD_DATE=$(date  --iso-8601=seconds --utc)
           LEGO_VERSION=${{ steps.GET_VERSIONS.outputs.LEGO_VERSION }}
           BUILD_REVISION=${{ steps.IS_UPDATE_AVAILABLE.outputs.BUILD_REVISION }}
-          DOCKER_IMAGE_VERSION=$LEGO_VERSION-$BUILD_REVISION
+          BUILD_IMAGE_VERSION=$LEGO_VERSION-$BUILD_REVISION
           
-          echo "Upcoming release version: $DOCKER_IMAGE_VERSION"
+          echo "Upcoming build version: $BUILD_IMAGE_VERSION"
           echo BUILD_DATE=$BUILD_DATE > buildvars
           echo LEGO_VERSION=$LEGO_VERSION >> buildvars
-          echo DOCKER_IMAGE_VERSION=$DOCKER_IMAGE_VERSION >> buildvars
+          echo BUILD_IMAGE_VERSION=$BUILD_IMAGE_VERSION >> buildvars
 
           git add buildvars
           git commit buildvars -m "Updated buildvars"
