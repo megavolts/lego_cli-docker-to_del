@@ -3,13 +3,22 @@
 
 echo "[info] Starting certificate check script..."
 
-# Check for required environment variable
-if [[ -z "$LEGO_DOMAINS" ]]; then
-    echo "[warn] LEGO_DOMAINS is required, but provided. Nothing happens!"
+# NOTE: The `ENV_LEGO_RENEW` specifies only a Lego CLI renewal operation
+# so we only proceed if it is disabled
+if [[ -n "$ENV_LEGO_RENEW" ]] && [[ "$ENV_LEGO_RENEW" = "true" ]]; then
+    echo "[warn] ENV_LEGO_RENEW should be disabled when using auto-renew. Cancelled!"
     exit
 fi
-if [[ -z "$AUTORENEW_PERIOD" ]]; then
-    echo "[warn] AUTORENEW_PERIOD is not provided. Nothing happens!"
+
+# Check for required environment variable
+if [[ -z "$LEGO_DOMAINS" ]];
+    then
+    echo "[warn] LEGO_DOMAINS is required, but provided. Nothing happens."
+    exit
+fi
+if [[ -z "$AUTORENEW_PERIOD" ]];
+    then
+    echo "[warn] AUTORENEW_PERIOD is not provided. Nothing happens."
     exit
 fi
 
@@ -17,19 +26,26 @@ fi
 # NOTE: The autorenewal feature should work for more than one domain.
 for domain in $(echo $LEGO_DOMAINS | tr "," " ")
     do
-    cert_file=$LEGO_PATH/certificates/_.$domain.crt
-
-    if [ ! -f $cert_file ]; then
-        echo "[warn] The certificate file '$cert_file' was not found. Cancelled!"
-        continue
+    cert_file=$LEGO_PATH/certificates/$domain.crt
+    if [[ "$DEBUG" = "true" ]] ;
+        then
+        echo "Processing autorenewal for $domain"
     fi
 
+    if [ ! -f $cert_file ]; then
+        echo "[warn] The certificate file '$cert_file' was not found. Nothing happens."
+        continue
+    fi
     end_date=$(openssl x509 -in $cert_file -noout -enddate | sed 's/;.*//' | sed 's/notAfter=//')
     end_date_timestamp=$(date -d "$end_date" +"%s")
     end_date_before_expire=$(date -d "$end_date $AUTORENEW_PERIOD days ago" +"%s")
     current_time=$(date +%s)
+
     # DEBUG: enable this when testing
-    current_time=$(date -d "+90 days" +%s)
+    if [[ "$DEBUG" = "true" ]] ;
+        then
+        current_time=$(date -d "+90 days" +%s)
+    fi
 
     echo "[info] Checking if certificate is closer to expire..."
     echo "           Cert File: $cert_file"

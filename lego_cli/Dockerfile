@@ -30,6 +30,7 @@ RUN echo "Installing lego for "$TARGETARCH"..." \
     esac \
     && LEGO_VERSION=$( echo $BUILD_IMAGE_VERSION | cut -d- -f1 ) \
     && echo "lego version: $LEGO_VERSION for $ARCH" \
+    && echo "Downloading: https://github.com/go-acme/lego/releases/download/v${LEGO_VERSION}/lego_v${LEGO_VERSION}_${ARCH}.tar.gz" \
     && curl -L "https://github.com/go-acme/lego/releases/download/v${LEGO_VERSION}/lego_v${LEGO_VERSION}_${ARCH}.tar.gz" \
             -o lego.tar.gz \
     && tar -zxf lego.tar.gz -C /usr/local/bin/ lego \
@@ -73,7 +74,7 @@ ENV LEGO_EMAIL= \
 # Staging option
     STAGING="false" \
 # Certificate auto-renewal option
-    AUTORENEW="false" \
+    AUTORENEW="true" \
     # Number of day before certificate expiration when renewal attempt should start.
     # Default: 3 days
     AUTORENEW_PERIOD="3" \
@@ -83,9 +84,9 @@ ENV LEGO_EMAIL= \
 # Challenge types
    # HTTP. Default: false
    LEGO_HTTP=false \
-   # DNS. Defaults https://acme-v02.api.letsencrypt.org/directory
+   # DNS. 
    # Supported DNS providers: https://go-acme.github.io/lego/dns/#dns-providers
-   LEGO_DNS="https://acme-v02.api.letsencrypt.org/directory" \
+   LEGO_DNS= \
 # Force certificate renewal
 # Set to true to force renew certificate in LEGO_RENEW_DAYS days [default 30]
     LEGO_RENEW="false" \
@@ -104,9 +105,8 @@ COPY --from=buildenv /opt /opt
 
 ENTRYPOINT ["/opt/entrypoint.sh"]
 
-CMD ["lego"]
+# CMD ["lego"]
 
-# Metadata
 LABEL org.opencontainers.image.vendor="Marc Oggier" \
       org.opencontainers.image.url="https://github.com/"${BUILD_REPOSITORY}"-docker" \
       org.opencontainers.image.title="$BUILD_NAME" \

@@ -6,6 +6,8 @@ set -e
 
 INPUT=$1
 
+echo "[debug] Debug mode enabled"
+
 # Check if incoming command contains flags
 if [[ "${1#-}" != "$INPUT" ]] && [[ "$INPUT" != "--certificate-renew" ]];
     then
@@ -19,9 +21,6 @@ elif [[ -n "$LEGO_ENABLE" ]] && [[ "$LEGO_ENABLE" = "true" ]];
     if [[ -n "$INPUT" ]] && [[ "$INPUT" = "--certificate-renew" ]];
         then
         LEGO_RENEW=true
-        if [[ "$AUTORENEW" = "true" ]];
-            echo "[warn] LEGO_RENEW is enabled, conflicting with AUTORENEW. AUTORENEW is now disabled"
-            AUTORENEW=false
     fi
 
     # Operation types, the default is `run` subcommand
@@ -85,10 +84,7 @@ elif [[ -n "$LEGO_ENABLE" ]] && [[ "$LEGO_ENABLE" = "true" ]];
     if [[ -n "$LEGO_SERVER" ]];
         then
         args="$args --server=$LEGO_SERVER"
-    else
-        args="$args --server="
     fi
-    echo $LEGO_SERVER
 
     if [[ -n "$LEGO_CSR" ]];
         then
@@ -103,37 +99,49 @@ elif [[ -n "$LEGO_ENABLE" ]] && [[ "$LEGO_ENABLE" = "true" ]];
     set -- lego $args$op
 
     ## Enable auto-renew only at start up time
-    if [[ "$AUTORENEW" = "true" ]];
+    if [[ -z "$LEGO_RENEW" ]] || [[ "$LEGO_RENEW" = "false" ]]; 
         then
-        domain=$(echo $LEGO_DOMAINS | sed 's/;.*//' | sed 's/*.//')
-        cert_file=$LEGO_PATH/certificates/_.$domain.crt
-
-        # 1. Run Lego command only if a certificate does not exist for this domain
-        if [ -f $cert_file ];
+        if [[ -n "$AUTORENEW" ]] && [[ "$AUTORENEW" = "true" ]];
             then
-            echo "[info] A certificate file '$cert_file' was found. Command execution skipped."
-        else
-            echo "[info] Continuing with running the requested command..."
-            lego $args$op
+
+            
+            for domain in $(echo $LEGO_DOMAINS | tr "," " ")
+                do
+                cert_file=$LEGO_PATH/certificates/$domain.crt
+
+                # 1. Run Lego command only if a certificate does not exist for this domain
+                if [ -f $cert_file ];
+                    then
+                    echo "[info] A certificate file '$cert_file' was found. Command execution skipped."
+                else
+                    echo "[info] Continuing with running the requested command..."
+                    lego $args$op
+                fi
+            done
+
+            # 2. Configure the Crontab task and redirect its output to Docker stdout
+            echo
+            echo "[info] Adding autorenewal task as a cronjob"
+            echo "LEGO_DOMAINS=$LEGO_DOMAINS" > $LEGO_PATH/certificates/.crontab.env
+            echo "AUTORENEW_PERIOD=$AUTORENEW_PERIOD" >> $LEGO_PATH/certificates/.crontab.env
+            echo "DEBUG=$DEBUG" >> $LEGO_PATH/certificates/.crontab.env
+            echo "LEGO_RENEW=$LEGO_RENEW" >> $LEGO_PATH/certificates/.crontab.env
+
+    #        declare -p | grep -Ev 'BASHOPTS|BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID' > /opt/lego/env_container.env
+            cmd="SHELL=/bin/ash BASH_ENV=$LEGO_PATH/certificates/.crontab.env /opt/lego/renew_certificate.sh > /proc/1/fd/1 2>&1"
+            crontab -l | echo "$AUTORENEW_CHECK $cmd" | crontab -
+
+            # 3. Finally, start the Crontab scheduler and block
+            echo "[info] The Crontab task is configured successfully!"
+            echo "       Waiting for the Crontab scheduler to run the task..."
+            echo "       Crontab interval: $AUTORENEW_CHECK"
+            crontab -l
+
+            echo "[info]  Stopping the Crontab scheduler..." && tail -f /dev/null
         fi
-
-        # 2. Configure the Crontab task and redirect its output to Docker stdout
-        echo
-        echo "[info] Configuring the certificate auto-renewal Crontab task..."
-        declare -p | grep -Ev 'BASHOPTS|BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID' > /container.env
-        cmd="SHELL=/bin/ash BASH_ENV=/container.env /opt/lego/renew_certificate.sh > /proc/1/fd/1 2>&1"
-        crontab -l | echo "$AUTORENEW_PERIOD $cmd" | crontab -
-
-        # 3. Finally, start the Crontab scheduler and block
-        echo "[info] The Crontab task is configured successfully!"
-        echo "       Waiting for the Crontab scheduler to run the task..."
-        echo "       Crontab interval: $AUTORENEW_CRON_INTERVAL"
-        cron -f
-
-        echo "[info]  Stopping the Crontab scheduler..."
-        exit
     fi
-
 fi
+# make sure the certificate are usable 
+chmod 775 $LEGO_PATH -R
 
-exec "$@"
+echo "$@" && tail -f /dev/null
