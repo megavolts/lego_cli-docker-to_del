@@ -23,7 +23,8 @@ RUN apk --update --no-cache add \
         tzdata
 
 RUN echo "Installing lego..." \
-    && case "$TARGETAARRCH" in \
+    && echo $TARGETARCH \
+    && case "$TARGETARCH" in \
         "amd64") ARCH='linux_amd64' ;; \
         "arm64") ARCH='linux_arm64' ;; \
         "386") ARCH='linux_386' ;; \
