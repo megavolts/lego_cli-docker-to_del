@@ -72,15 +72,16 @@ ENV LEGO_SERVER=
 ENV LEGO_CSR=
 ENV LEGO_ACCEPT_TOS=true
 ENV LEGO_PATH=/opt/ssl/
-ENV LEGO_STAGING=false
+ENV STAGING=false
 
 # Challenge types
 ENV LEGO_HTTP=false
 
 # See Lego DNS providers supported https://go-acme.github.io/lego/dns/#dns-providers
+# Defaults https://acme-v02.api.letsencrypt.org/directory
 ENV LEGO_DNS=https://acme-v02.api.letsencrypt.org/directory
 
-# Specify if the operation will be a `renewal`
+# Set to true to force renew certificate in LEGO_RENEW_DAYS days [default 30]
 ENV LEGO_RENEW=false
 ENV LEGO_RENEW_DAYS=30
 

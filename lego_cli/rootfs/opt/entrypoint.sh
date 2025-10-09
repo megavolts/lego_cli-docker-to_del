@@ -68,12 +68,12 @@ elif [[ -n "$LEGO_ENABLE" ]] && [[ "$LEGO_ENABLE" = "true" ]];
         done
     fi
 
-    if [[ -n "$LEGO_SERVER" ]] && [[ -n "$LEGO_STAGING" ]] && [[ $LEGO_STAGING = true ]];
+    if [[ -n "$LEGO_SERVER" ]] && [[ -n "$STAGING" ]] && [[ $STAGING = true ]];
         then
         echo "[warn] Staging and server option cannot specified at the same time."
         echo "       Forcing staging option with server --server=https://acme-staging-v02.api.letsencrypt.org/directory"
         LEGO_SERVER="https://acme-staging-v02.api.letsencrypt.org/directory"
-    elif [[ -n "$LEGO_STAGING" ]] && [[ $LEGO_STAGING = true ]];
+    elif [[ -n "$STAGING" ]] && [[ $STAGING = true ]];
         then
         echo "[warn] Enabling staging with default server"
         LEGO_SERVER="https://acme-staging-v02.api.letsencrypt.org/directory"

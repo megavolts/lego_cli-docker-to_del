@@ -1,5 +1,5 @@
 # 2 - build Unbound
-name: CD 21 Manual Build
+name: CD 21 Build and Push
    
 on:
  workflow_run:
@@ -73,7 +73,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         env:
-          DOCKERHUB_SLUG: "megavolts/unbound"
+          DOCKERHUB_SLUG: "megavolts/lego_cli"
         with:
           platforms: linux/amd64,linux/armv6,linux/armv7,linux/arm64
           builder: ${{ steps.buildx.outputs.name }}

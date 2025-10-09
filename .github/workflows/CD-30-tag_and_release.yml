@@ -1,5 +1,5 @@
 # 3 - Tag and Release
-name: CD 31 manual Tag and
+name: CD 30 Tag and Release
    
 on:
 #  workflow_dispatch:     
