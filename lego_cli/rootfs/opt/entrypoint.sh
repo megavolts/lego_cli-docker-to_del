@@ -19,6 +19,9 @@ elif [[ -n "$LEGO_ENABLE" ]] && [[ "$LEGO_ENABLE" = "true" ]];
     if [[ -n "$INPUT" ]] && [[ "$INPUT" = "--certificate-renew" ]];
         then
         LEGO_RENEW=true
+        if [[ "$AUTORENEW" = "true" ]];
+            echo "[warn] LEGO_RENEW is enabled, conflicting with AUTORENEW. AUTORENEW is now disabled"
+            AUTORENEW=false
     fi
 
     # Operation types, the default is `run` subcommand
@@ -32,7 +35,7 @@ elif [[ -n "$LEGO_ENABLE" ]] && [[ "$LEGO_ENABLE" = "true" ]];
     else
         op=" run"
     fi
-
+    
     if [[ -n "$LEGO_PATH" ]];
         then
         args="$args --path=$LEGO_PATH"
@@ -100,39 +103,37 @@ elif [[ -n "$LEGO_ENABLE" ]] && [[ "$LEGO_ENABLE" = "true" ]];
     set -- lego $args$op
 
     ## Enable auto-renew only at start up time
-    if [[ -z "$LEGO_RENEW" ]] || [[ "$LEGO_RENEW" = "false" ]];
+    if [[ "$AUTORENEW" = "true" ]];
         then
-        if [[ "$CERT_AUTORENEW" = "true" ]];
+        domain=$(echo $LEGO_DOMAINS | sed 's/;.*//' | sed 's/*.//')
+        cert_file=$LEGO_PATH/certificates/_.$domain.crt
+
+        # 1. Run Lego command only if a certificate does not exist for this domain
+        if [ -f $cert_file ];
             then
-            domain=$(echo $LEGO_DOMAINS | sed 's/;.*//' | sed 's/*.//')
-            cert_file=$LEGO_PATH/certificates/_.$domain.crt
-
-            # 1. Run Lego command only if a certificate does not exist for this domain
-            if [ -f $cert_file ];
-                then
-                echo "[info] A certificate file '$cert_file' was found. Command execution skipped."
-            else
-                echo "[info] Continuing with running the requested command..."
-                lego $args$op
-            fi
-
-            # 2. Configure the Crontab task and redirect its output to Docker stdout
-            echo
-            echo "[info] Configuring the certificate auto-renewal Crontab task..."
-            declare -p | grep -Ev 'BASHOPTS|BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID' > /container.env
-            cmd="SHELL=/bin/bash BASH_ENV=/container.env /opt/lego/renew_certificate.sh > /proc/1/fd/1 2>&1"
-            crontab -l | echo "$CERT_AUTORENEW_CRON_INTERVAL $cmd" | crontab -
-
-            # 3. Finally, start the Crontab scheduler and block
-            echo "[info] The Crontab task is configured successfully!"
-            echo "[info] Waiting for the Crontab scheduler to run the task..."
-            echo "[info]   Crontab interval: $CERT_AUTORENEW_CRON_INTERVAL"
-            cron -f
-
-            echo "[info]  Stopping the Crontab scheduler..."
-            exit
+            echo "[info] A certificate file '$cert_file' was found. Command execution skipped."
+        else
+            echo "[info] Continuing with running the requested command..."
+            lego $args$op
         fi
+
+        # 2. Configure the Crontab task and redirect its output to Docker stdout
+        echo
+        echo "[info] Configuring the certificate auto-renewal Crontab task..."
+        declare -p | grep -Ev 'BASHOPTS|BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID' > /container.env
+        cmd="SHELL=/bin/ash BASH_ENV=/container.env /opt/lego/renew_certificate.sh > /proc/1/fd/1 2>&1"
+        crontab -l | echo "$AUTORENEW_PERIOD $cmd" | crontab -
+
+        # 3. Finally, start the Crontab scheduler and block
+        echo "[info] The Crontab task is configured successfully!"
+        echo "       Waiting for the Crontab scheduler to run the task..."
+        echo "       Crontab interval: $AUTORENEW_CRON_INTERVAL"
+        cron -f
+
+        echo "[info]  Stopping the Crontab scheduler..."
+        exit
     fi
+
 fi
 
 exec "$@"

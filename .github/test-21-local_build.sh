@@ -31,5 +31,5 @@ docker buildx build $GIT_DIR/lego_cli/ \
         -t megavolts/lego_cli:testbuild \
         --build-arg BUILD_IMAGE_VERSION=$BUILD_IMAGE_VERSION \
         --build-arg BUILD_DATE=$BUILD_DATE \
-        --build-arg TARGETARCH="linux/amd64" \
+        --build-arg TARGETARCH="amd64" \
         --load

@@ -1,6 +1,6 @@
-ARG BUILD_REPOSITORY="megavolts/lego_cli" \
-    BUILD_NAME="Lego CLI client" \
+ARG BUILD_NAME="Lego CLI client" \
     BUILD_DESCRIPTION="CLI client of Let's Encrypt/ACME client and library written in Go" \
+    BUILD_REPOSITORY="megavolts/lego_cli" \
     ALPINE_VERSION="latest" \
     BUILD_IMAGE_VERSION
 
@@ -18,7 +18,7 @@ RUN apk --update --no-cache add \
         curl \
         file \
         tzdata
-
+# 1.1 Install lego
 RUN echo "Installing lego for "$TARGETARCH"..." \
     && case "$TARGETARCH" in \
         "amd64") ARCH='linux_amd64' ;; \
@@ -36,6 +36,7 @@ RUN echo "Installing lego for "$TARGETARCH"..." \
     && chmod +x /usr/local/bin/lego \
     && rm -rf lego.tar.gz
 
+# 1.2 Check lego install
 RUN echo "Testing docker image..." \
     && uname -a \
     && cat /etc/os-release \
@@ -44,8 +45,8 @@ RUN echo "Testing docker image..." \
     && lego --version \
     && lego --help
 
+# 1.3 Configure lego_cli 
 COPY rootfs/ /
-
 RUN echo "Configure lego_cli docker image..." \
     && chmod 755 /opt/entrypoint.sh \
     && chmod 755 /opt/lego/renew_certificate.sh
@@ -63,38 +64,41 @@ ARG BUILD_IMAGE_VERSION \
 ENV BUILD_IMAGE_VERSION="${BUILD_IMAGE_VERSION}"
 
 # General options
-ENV LEGO_EMAIL=
-ENV LEGO_DOMAINS=
-ENV LEGO_SERVER=
-ENV LEGO_CSR=
-ENV LEGO_ACCEPT_TOS="true"
-ENV LEGO_PATH="/opt/ssl/"
-ENV STAGING="false"
-
+ENV LEGO_EMAIL= \
+    LEGO_DOMAINS= \
+    LEGO_SERVER= \
+    LEGO_CSR= \
+    LEGO_ACCEPT_TOS="true" \
+    LEGO_PATH="/opt/ssl/" \
+# Staging option
+    STAGING="false" \
+# Certificate auto-renewal option
+    AUTORENEW="false" \
+    # Number of day before certificate expiration when renewal attempt should start.
+    # Default: 3 days
+    AUTORENEW_PERIOD="3" \
+    # Cron job trigger to check certificate expiration
+    # Default: at midnight, everyday
+    AUTORENEW_CHECK="0 0 * * *" \
 # Challenge types
-ENV LEGO_HTTP=false
-
-# See Lego DNS providers supported https://go-acme.github.io/lego/dns/#dns-providers
-# Defaults https://acme-v02.api.letsencrypt.org/directory
-ENV LEGO_DNS="https://acme-v02.api.letsencrypt.org/directory"
-
+   # HTTP. Default: false
+   LEGO_HTTP=false \
+   # DNS. Defaults https://acme-v02.api.letsencrypt.org/directory
+   # Supported DNS providers: https://go-acme.github.io/lego/dns/#dns-providers
+   LEGO_DNS="https://acme-v02.api.letsencrypt.org/directory" \
+# Force certificate renewal
 # Set to true to force renew certificate in LEGO_RENEW_DAYS days [default 30]
-ENV LEGO_RENEW="false"
-ENV LEGO_RENEW_DAYS="30"
-
-# Certificate auto-renew feature
-ENV CERT_AUTORENEW="false"
-# Renew the certificate 3 days before expiration
-ENV CERT_AUTORENEW_PERIOD="3"
-# Check certificate expiration once a day by default
-ENV CERT_AUTORENEW_CRON_INTERVAL="0 0 * * *"
+    LEGO_RENEW="false" \
+    # Number of elapsed day before renewal
+    LEGO_RENEW_DAYS="30"
 
 RUN apk --update --no-cache add \
         ca-certificates \
         tzdata \
-    # Clean up local repository of retrieved packages and remove the package lists
+    # Clean temprorary file and package cache
     && rm -rf /tmp/* /var/cache/apk/*
 
+# Copy lego binary and opt files from buildenv
 COPY --from=buildenv /usr/local/bin/lego /bin/
 COPY --from=buildenv /opt /opt
 
