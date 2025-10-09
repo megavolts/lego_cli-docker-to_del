@@ -12,8 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       BUILD_DATE: ${{ steps.IMPORT_BUILDVARS.outputs.BUILD_DATE }}
-      LEGO_VERSION: ${{ steps.IMPORT_BUILDVARS.outputs.LEGO_VERSION }}
-      DOCKER_IMAGE_VERSION: ${{ steps.IMPORT_BUILDVARS.outputs.DOCKER_IMAGE_VERSION }}
+      BUILD_IMAGE_VERSION: ${{ steps.IMPORT_BUILDVARS.outputs.DOCKER_IMAGE_VERSION }}
     
     steps:             
     - name: Checkout source
@@ -79,8 +78,7 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           build-args: |
             BUILD_DATE=${{ needs.buildvars.outputs.BUILD_DATE }}  
-            LEGO_VERSION=${{ needs.buildvars.outputs.LEGO_VERSION }}  
-            DOCKER_IMAGE_VERSION=${{ needs.buildvars.outputs.DOCKER_IMAGE_VERSION }}
+            BUILD_VERSION=${{ needs.buildvars.outputs.DOCKER_IMAGE_VERSION }}
           file: ./lego_cli/Dockerfile  
           context: ./lego_cli/ 
           push: ${{ github.event_name != 'pull_request' }}

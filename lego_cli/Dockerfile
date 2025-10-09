@@ -1,17 +1,14 @@
-ARG BUILD_REPOSITORY="megavolts/lego" \
+ARG BUILD_REPOSITORY="megavolts/lego_cli" \
     BUILD_NAME="Lego CLI client" \
     BUILD_DESCRIPTION="CLI client of Let's Encrypt/ACME client and library written in Go" \
     ALPINE_VERSION="latest" \
-    BUILD_VERSION
+    BUILD_IMAGE_VERSION
 
 # Stage 1 - install lego as buildplatform
-
 FROM --platform=$BUILDPLATFORM alpine:$ALPINE_VERSION AS buildenv
 
 ARG TARGETARCH \
-    BUILD_VERSION
-
-ENV BUILD_VERSION=$BUILD_VERSION
+    BUILD_IMAGE_VERSION
 
 # Set shell
 SHELL ["/bin/sh", "-o", "pipefail", "-c"]
@@ -22,8 +19,7 @@ RUN apk --update --no-cache add \
         file \
         tzdata
 
-RUN echo "Installing lego..." \
-    && echo $TARGETARCH \
+RUN echo "Installing lego for $TARGETARCH..." \
     && case "$TARGETARCH" in \
         "amd64") ARCH='linux_amd64' ;; \
         "arm64") ARCH='linux_arm64' ;; \
@@ -32,8 +28,8 @@ RUN echo "Installing lego..." \
         "arm/v6") ARCH='linux_armv6' ;; \
         *) echo >&2 "[error] unsupported $TARGETARCH architecture"; exit 1 ;; \
     esac \
-    &&     LEGO_VERSION=$( echo $BUILD_VERSION | cut -d- -f1 ) \
-    && echo $LEGO_VERSION \
+    && LEGO_VERSION=$( echo $BUILD_IMAGE_VERSION | cut -d- -f1 ) \
+    && echo "lego version: $LEGO_VERSION for $ARCH" \
     && curl -L "https://github.com/go-acme/lego/releases/download/v${LEGO_VERSION}/lego_v${LEGO_VERSION}_${ARCH}.tar.gz" \
             -o lego.tar.gz \
     && tar -zxf lego.tar.gz -C /usr/local/bin/ lego \
@@ -57,14 +53,14 @@ RUN echo "Configure lego_cli docker image..." \
 # Stage 2 - build for target platform
 FROM  alpine:$ALPINE_VERSION AS lego
 
-ARG BUILD_VERSION \
+ARG BUILD_IMAGE_VERSION \
     BUILD_REPOSITORY \
     BUILD_DESCRIPTION \
-    BUILD_VERSION \
+    BUILD_IMAGE_VERSION \
     BUILD_NAME \
     BUILD_TITLE 
 
-ENV BUILD_VERSION=${BUILD_VERSION}
+ENV BUILD_IMAGE_VERSION=${BUILD_IMAGE_VERSION}
 
 # General options
 ENV LEGO_EMAIL=
@@ -111,5 +107,5 @@ LABEL org.opencontainers.image.vendor="Marc Oggier" \
       org.opencontainers.image.url="https://github.com/${BUILD_REPOSITORY}-docker" \
       org.opencontainers.image.title="$BUILD_NAME" \
       org.opencontainers.image.description="$BUILD_DESCRIPTION" \
-      org.opencontainers.image.version="$($BUILD_VERSION | cut -d- -f1)" \
+      org.opencontainers.image.version="$($BUILD_IMAGE_VERSION | cut -d- -f1)" \
       org.opencontainers.image.documentation="https://github.com/${BUILD_REPOSITORY}-docker"
