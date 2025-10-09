@@ -81,7 +81,8 @@ jobs:
             BUILD_DATE=${{ needs.buildvars.outputs.BUILD_DATE }}  
             LEGO_VERSION=${{ needs.buildvars.outputs.LEGO_VERSION }}  
             DOCKER_IMAGE_VERSION=${{ needs.buildvars.outputs.DOCKER_IMAGE_VERSION }}
-          file: ./lego_cli/Dockerfile   
+          file: ./lego_cli/Dockerfile  
+          context: ./lego_cli/ 
           push: ${{ github.event_name != 'pull_request' }}
           sbom: ${{ github.event_name != 'pull_request' }}
           provenance: ${{ github.event_name != 'pull_request' }}
