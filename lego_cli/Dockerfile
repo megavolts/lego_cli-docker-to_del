@@ -23,12 +23,12 @@ RUN apk --update --no-cache add \
         tzdata
 
 RUN echo "Installing lego..." \
-    && case "$TARGETARCH" in \
-        "linux/amd64") ARCH='linux_amd64' ;; \
-        "linux/arm64") ARCH='linux_arm64' ;; \
-        "linux/386") ARCH='linux_386' ;; \
-        "linux/arm/v7") ARCH='linux_armv7' ;; \
-        "linux/arm/v6") ARCH='linux_armv6' ;; \
+    && case "$TARGETAARRCH" in \
+        "amd64") ARCH='linux_amd64' ;; \
+        "arm64") ARCH='linux_arm64' ;; \
+        "386") ARCH='linux_386' ;; \
+        "arm/v7") ARCH='linux_armv7' ;; \
+        "arm/v6") ARCH='linux_armv6' ;; \
         *) echo >&2 "[error] unsupported $TARGETARCH architecture"; exit 1 ;; \
     esac \
     &&     LEGO_VERSION=$( echo $BUILD_VERSION | cut -d- -f1 ) \
