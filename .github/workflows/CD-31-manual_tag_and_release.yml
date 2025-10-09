@@ -1,0 +1,94 @@
+# 3 - Tag and Release
+name: CD 31 manual Tag and
+   
+on:
+  workflow_dispatch:     
+#   workflow_run:
+#     workflows: [CD 20 Build Unbound Docker Image]
+#     types:
+#       - completed
+
+jobs: 
+  tag_and_release:
+    runs-on: ubuntu-latest
+#    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:             
+      - name: Checkout source
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Import GPG key 
+        id: IMPORT_GPG
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.BOT_GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.BOT_GPG_PWD }}
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+          git_tag_gpgsign: true
+          git_push_gpgsign: false
+          trust_level: 5
+          
+      - name: Push tag and upload release to GitHub
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GIT_AUTHOR_NAME: ${{ steps.IMPORT_GPG.outputs.name }}
+          GIT_AUTHOR_EMAIL: ${{ steps.IMPORT_GPG.outputs.email }}
+          GIT_COMMITTER_NAME: ${{ steps.IMPORT_GPG.outputs.name }}
+          GIT_COMMITTER_EMAIL: ${{ steps.IMPORT_GPG.outputs.email }}
+        run: |
+            git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+
+            # new build
+            DOCKER_IMAGE_VERSION=$(cat ./buildvars | awk '/^DOCKER_IMAGE_VERSION=/' | cut -d= -f2)
+            RELEASE_VERSION=$(echo $DOCKER_IMAGE_VERSION | cut -d= -f2 | cut -d- -f1)
+            RELEASE_TAG=v$DOCKER_IMAGE_VERSION
+
+            # previous build
+            if [[ $(curl -s https://api.github.com/repos/megavolts/lego_cli/releases | grep "status" | cut -d\" -f4) = 404 ]] ;
+                then
+                echo "No release existing"
+                FLAG_FIRST_RELEASE=true
+            else
+                PREVIOUS_RELEASE=$(curl -s https://api.github.com/repos/megavolts/lego_cli/releases | jq '.[0] | .name' -r | grep -Eo '([0-9]+)(\.?[0-9]+)*' | head -1)
+                PREVIOUS_RELEASE_VERSION=$(curl -s https://raw.githubusercontent.com/megavolts/lego_cli/refs/heads/$PREVIOUS_RELEASE/buildvars | awk '/^LEGO_VERSION=/' | cut -d= -f2)
+            fi
+
+            # new release
+            if [[ $(curl -s https://api.github.com/repos/megavolts/lego_cli/releases | grep "status" | cut -d\" -f4) = 404 ]] ;
+                then
+                echo "No release existing"
+                FLAG_FIRST_RELEASE=true
+            else
+                PREVIOUS_RELEASE=$(curl -s https://api.github.com/repos/megavolts/lego_cli/releases | jq '.[0] | .name' -r | grep -Eo '([0-9]+)(\.?[0-9]+)*' | head -1)
+                PREVIOUS_RELEASE_VERSION=$(curl -s https://raw.githubusercontent.com/megavolts/lego_cli/refs/heads/$PREVIOUS_RELEASE/buildvars | awk '/^LEGO_VERSION=/' | cut -d= -f2)
+            fi
+
+            if [[ $FLAG_FIRST_RELEASE = "true" ]];
+                then
+                NOTES="\x23\x23 $(date '+%Y-%m-%d') \n\x23\x23 Initial Release"
+                NOTES+="\n:fireworks: With go-acme lego $RELEASE_VERSION)"
+                NOTES+="\n\n\x2A\x2Ago-acme lego changelog\x2A\x2A: https://github.com/go-acme/lego/releases/tag/v$RELEASE_VERSION" ;
+
+            else
+                NOTES="\x23\x23 $(date '+%Y-%m-%d') \n\x23\x23 What's Changed?"
+                if ! [[ $RELEASE_VERSION = $PREVIOUS_RELEASE_VERSION ]] ;
+                    then
+                    NOTES+="\n:arrow_up_small: Updated Lego to $RELEASE_VERSION)"
+                    NOTES+="\n\n\x2A\x2Ago-acme lego changelog\x2A\x2A: https://github.com/go-acme/lego/releases/tag/v$RELEASE_VERSION" ;
+                fi
+            fi
+
+            RELEASE_NOTE=$(echo -e $NOTES)
+
+            git tag -a "$RELEASE_TAG" -m "$RELEASE_TAG"
+            git push -u origin "$RELEASE_TAG"
+
+            git fetch --all --tags
+
+            git checkout -b "$DOCKER_IMAGE_VERSION" "$RELEASE_TAG"
+            git push --set-upstream origin "$DOCKER_IMAGE_VERSION"
+            gh release create "$RELEASE_TAG" -t "$DOCKER_IMAGE_VERSION" -n "$RELEASE_NOTE" --latest
+            
+            exit 0

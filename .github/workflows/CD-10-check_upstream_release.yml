@@ -1,0 +1,80 @@
+# 1 - Daily check of upstream release for Unbound and OpenSSL
+name: CD 10 Check Upstream Release
+
+on:
+  schedule:
+    - cron: '0 18 * * mon-fri'
+  workflow_dispatch:
+
+jobs:
+  unbound-update:
+    runs-on: ubuntu-latest
+              
+    steps:
+      - name: Get versions
+        id: GET_VERSIONS
+        run: |
+            # Upstream Release
+            BOOL="$(curl -s https://api.github.com/repos/go-acme/lego/releases | jq '.[0] | .prerelease')"
+            if $BOOL; then
+                echo "Pre-release, skipping"
+                exit 1
+            else
+                echo LEGO_VERSION="$(curl -s https://api.github.com/repos/go-acme/lego/releases | jq '.[0] | .name' -r | grep -Eo '([0-9]+)(\.?[0-9]+)*' | head -1)" >> $GITHUB_OUTPUT
+            fi
+
+            # Get current version in lego_cli docker
+            echo DOCKER_LEGO_VERSION="$(curl -s https://raw.githubusercontent.com/megavolts/lego_cli/refs/heads/main/buildvars | awk '/^DOCKER_IMAGE_VERSION=/' | cut -d= -f2 | cut -d- -f1)" >> $GITHUB_OUTPUT  
+            echo DOCKER_REVISION="$(curl -s https://raw.githubusercontent.com/megavolts/lego_cli/refs/heads/main/buildvars | awk '/^DOCKER_IMAGE_VERSION=/' | cut -d= -f2 | cut -d- -f2))" >> $GITHUB_OUTPUT
+
+      - name: Is update available
+        id: IS_UPDATE_AVAILABLE
+        run: |
+          if ! [[ "${{ steps.GET_VERSIONS.outputs.LEGO_VERSION }}" = "${{ steps.GET_VERSIONS.outputs.DOCKER_LEGO_VERSION }}" ]]; then
+            echo "Update found for Unbound"
+            echo BUILD_REVISION=0 >> $GITHUB_OUTPUT
+          else
+            echo "No update found"
+            exit 1
+          fi 
+         
+      - name: Checkout source
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          
+      - name: Import GPG key 
+        id: IMPORT_GPG
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.BOT_GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.BOT_GPG_PWD }}
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+          git_push_gpgsign: false
+          trust_level: 5
+
+      - name: Push files to repository
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GIT_AUTHOR_NAME: ${{ steps.IMPORT_GPG.outputs.name }}
+          GIT_AUTHOR_EMAIL: ${{ steps.IMPORT_GPG.outputs.email }}
+          GIT_COMMITTER_NAME: ${{ steps.IMPORT_GPG.outputs.name }}
+          GIT_COMMITTER_EMAIL: ${{ steps.IMPORT_GPG.outputs.email }}
+        run: |
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}  
+
+          BUILD_DATE=$(date  --iso-8601=seconds --utc)
+          LEGO_VERSION=${{ steps.GET_VERSIONS.outputs.LEGO_VERSION }}
+          BUILD_REVISION=${{ steps.IS_UPDATE_AVAILABLE.outputs.BUILD_REVISION }}
+          DOCKER_IMAGE_VERSION=$UNBOUND_VERSION-$BUILD_REVISION
+          
+          echo "Upcoming release version: $DOCKER_IMAGE_VERSION"
+          echo BUILD_DATE=$BUILD_DATE > buildvars
+          echo LEGO_VERSION=$LEGO_VERSION >> buildvars
+          echo DOCKER_IMAGE_VERSION=$DOCKER_IMAGE_VERSION >> buildvars
+
+          git add buildvars
+          git commit buildvars -m "Updated buildvars"
+          git push origin main
+          exit 0
