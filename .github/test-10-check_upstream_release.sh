@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/ash
 # Script to test build the docker image locally
 
 GIT_DIR=$(pwd)

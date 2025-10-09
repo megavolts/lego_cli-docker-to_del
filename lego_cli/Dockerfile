@@ -11,7 +11,7 @@ ARG TARGETARCH \
     BUILD_IMAGE_VERSION
 
 # Set shell
-SHELL ["/bin/sh", "-o", "pipefail", "-c"]
+SHELL ["/bin/ash", "-o", "pipefail", "-c"]
 
 RUN apk --update --no-cache add \
         ca-certificates \
@@ -19,7 +19,7 @@ RUN apk --update --no-cache add \
         file \
         tzdata
 
-RUN echo "Installing lego for $TARGETARCH..." \
+RUN echo "Installing lego for "$TARGETARCH"..." \
     && case "$TARGETARCH" in \
         "amd64") ARCH='linux_amd64' ;; \
         "arm64") ARCH='linux_arm64' ;; \
@@ -36,7 +36,7 @@ RUN echo "Installing lego for $TARGETARCH..." \
     && chmod +x /usr/local/bin/lego \
     && rm -rf lego.tar.gz
 
-RUN echo "Testing Docker image..." \
+RUN echo "Testing docker image..." \
     && uname -a \
     && cat /etc/os-release \
     && echo VERSION_NUMBER=$(cat /etc/alpine-release ) \
@@ -60,32 +60,32 @@ ARG BUILD_IMAGE_VERSION \
     BUILD_NAME \
     BUILD_TITLE 
 
-ENV BUILD_IMAGE_VERSION=${BUILD_IMAGE_VERSION}
+ENV BUILD_IMAGE_VERSION="${BUILD_IMAGE_VERSION}"
 
 # General options
 ENV LEGO_EMAIL=
 ENV LEGO_DOMAINS=
 ENV LEGO_SERVER=
 ENV LEGO_CSR=
-ENV LEGO_ACCEPT_TOS=true
-ENV LEGO_PATH=/opt/ssl/
-ENV STAGING=false
+ENV LEGO_ACCEPT_TOS="true"
+ENV LEGO_PATH="/opt/ssl/"
+ENV STAGING="false"
 
 # Challenge types
 ENV LEGO_HTTP=false
 
 # See Lego DNS providers supported https://go-acme.github.io/lego/dns/#dns-providers
 # Defaults https://acme-v02.api.letsencrypt.org/directory
-ENV LEGO_DNS=https://acme-v02.api.letsencrypt.org/directory
+ENV LEGO_DNS="https://acme-v02.api.letsencrypt.org/directory"
 
 # Set to true to force renew certificate in LEGO_RENEW_DAYS days [default 30]
-ENV LEGO_RENEW=false
-ENV LEGO_RENEW_DAYS=30
+ENV LEGO_RENEW="false"
+ENV LEGO_RENEW_DAYS="30"
 
 # Certificate auto-renew feature
-ENV CERT_AUTORENEW=false
+ENV CERT_AUTORENEW="false"
 # Renew the certificate 3 days before expiration
-ENV CERT_AUTORENEW_PERIOD=3
+ENV CERT_AUTORENEW_PERIOD="3"
 # Check certificate expiration once a day by default
 ENV CERT_AUTORENEW_CRON_INTERVAL="0 0 * * *"
 
@@ -104,8 +104,8 @@ CMD ["lego"]
 
 # Metadata
 LABEL org.opencontainers.image.vendor="Marc Oggier" \
-      org.opencontainers.image.url="https://github.com/${BUILD_REPOSITORY}-docker" \
+      org.opencontainers.image.url="https://github.com/"${BUILD_REPOSITORY}"-docker" \
       org.opencontainers.image.title="$BUILD_NAME" \
       org.opencontainers.image.description="$BUILD_DESCRIPTION" \
       org.opencontainers.image.version="$($BUILD_IMAGE_VERSION | cut -d- -f1)" \
-      org.opencontainers.image.documentation="https://github.com/${BUILD_REPOSITORY}-docker"
+      org.opencontainers.image.documentation="https://github.com/"${BUILD_REPOSITORY}"-docker"

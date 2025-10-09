@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/ash
 # docs: https://go-acme.github.io/lego/usage/cli/
 # Path: /opt/entrypoint.sh
 
